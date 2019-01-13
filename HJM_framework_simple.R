@@ -11,7 +11,7 @@ HJM_rate_simulation_simple = function(maturity_vector_in_years, final_simulation
   #Parameters for the model: Specify these to the situation
   dt = 1/252; #The time every rate will be predicted ahead for each simulation. 
   number_of_simulations = 100
-  number_of_factors = 1 #Number of principal components to be extracted.
+  number_of_factors = 3 #Number of principal components to be extracted.
   
   
   
@@ -62,9 +62,11 @@ HJM_rate_simulation_simple = function(maturity_vector_in_years, final_simulation
     for (j in 1:n_rates_to_simulate) 
     {
       #Working on the line below this one
-      S = vol_struc_mat[j, ]* Z_mat[j, ]
+
+      S = vol_struc_mat[j, ] %*% Z_mat[j, ] #S is a number when written this way. 
       
       #Might be better ways to make this one
+      check = drift[j]*time_intervals[j] + S*sqrt(time_intervals[j])
       forward_curve[j] = forward_curve[j+1] + drift[j]*time_intervals[j] + S*sqrt(time_intervals[j])
     }
     realized_short_rate[i+1] = forward_curve[1]
