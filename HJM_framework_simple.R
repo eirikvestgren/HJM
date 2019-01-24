@@ -66,7 +66,6 @@ HJM_rate_simulation_simple = function(maturity_vector_in_years, final_simulation
       S = vol_struc_mat[j, ] %*% Z_mat[j, ] #S is a number when written this way. 
       
       #Might be better ways to make this one
-      check = drift[j]*time_intervals[j] + S*sqrt(time_intervals[j])
       forward_curve[j] = forward_curve[j+1] + drift[j]*time_intervals[j] + S*sqrt(time_intervals[j])
     }
     realized_short_rate[i+1] = forward_curve[1]
@@ -215,24 +214,81 @@ get_PC_loadings = function(data, nFactors)
   n_variables_in_data = dim(data)[2]
   return(PCA$loadings[1:(nFactors*n_variables_in_data)])
 }
+
+#construct_new_data = function(data, maturities, new_maturities)
+#{
+#  all_maturities = sort(unique(c(maturities, new_maturities)))
+#  n_new_rates = length(all_maturities) - length(maturities)
+#  new_rates = list()
+#  ind_list_for_new_rates = c()
+#  
+#  for (i in 1:length(all_maturities))
+#  {
+#    if (all_maturities[i] %in% maturities)
+#    {
+#      next; #Same as continue in other languages
+#    }
+#    else
+#    {
+#      ind = which(maturities == all_maturities[i-1], arr.ind = TRUE)
+#      new_rates = c(new_rates, interpolated_rate_linear(data[[ind]], data[[ ind+1]], maturities[ind], maturities[ind+1], all_maturities[i]) )
+#      #Insert the new rates into the old data, and return. 
+#      ind_list_for_new_rates = c(ind_list_for_new_rates, i)
+#    }
+#  }
+#  return_rates = list()
+#  data_ind = 1
+#  new_ind = 1
+#  for (i in 1:length(all_maturities) )
+#  {
+#    if(i %in% ind_list_for_new_rates)
+#    {
+#      return_rates = c(return_rates, new_rates[new_ind])
+#      new = ind = new_ind +1
+#    }
+#    else{
+#      return_rates = c(return_rates, data[data_ind])
+#      data_ind = data_ind+1
+#    }
+#    
+#  }
+#  return(return_rates)
+#}
+
 construct_new_data = function(data, maturities, new_maturities)
+#Assume new_maturities and maturities disjoint
 {
+
   all_maturities = sort(unique(c(maturities, new_maturities)))
   n_new_rates = length(all_maturities) - length(maturities)
+  new_rates = list()
+  ind_list_for_new_rates = c()
   
-  
-  for (i in 1:length(all_maturities))
+  for (i in 1:n_new_rates)
   {
-    if (all_maturities[i] %in% maturities)
+    #Find the closest existing maturities to new_maturities[i]
+    temp_var = maturities - new_maturities[i]
+    ind_above = min(which(temp_var > 0, arr.ind = TRUE))
+    ind_below = ind_above - 1 
+    new_rates = c(new_rates, interpolated_rate_linear(data[[ind_below]], data[[ind_above]], maturities[ind_below], 
+                                                      maturities[ind_above], new_maturities[i]))
+    ind_list_for_new_rates = c(ind_list_for_new_rates, which(all_maturities == new_maturities[i], arr.ind = TRUE))
+  }
+  return_rates = list()
+  data_ind = 1
+  new_ind = 1
+  for (i in 1:length(all_maturities) )
+  {
+    if(i %in% ind_list_for_new_rates)
     {
-      next; #Same as continue in other languages 
+      return_rates = c(return_rates, new_rates[new_ind])
+      new_ind = new_ind +1
     }
-    else
-    {
-      ind = which(maturities == all_maturities[i], arr.ind = TRUE)
-      new_rate = interpolated_rate_linear(data[ ,ind-1], data[, ind+1], maturities[ind-1], all_maturities[i])
-      #Insert the new rates into the old data, and return. 
+    else{
+      return_rates = c(return_rates, data[data_ind])
+      data_ind = data_ind+1
     }
     
   }
+  return(return_rates)
 }
